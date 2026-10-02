@@ -221,7 +221,7 @@ static void decode_wcr (void);
 static void decode_mcr (void);
 static void close_port (void);
 static void mec_reset (void);
-static void mec_intack (int32 level);
+static void mec_intack (int32 level, int32 cpu);
 static void chk_irq (void);
 static void mec_irq (int32 level);
 static void set_sfsr (uint32 fault, uint32 addr, uint32 asi, uint32 read);
@@ -231,8 +231,8 @@ static void port_init (void);
 static uint32 read_uart (uint32 addr);
 static void write_uart (uint32 addr, uint32 data);
 static void flush_uart (void);
-static void uarta_tx (void);
-static void uartb_tx (void);
+static void uarta_tx (int32);
+static void uartb_tx (int32);
 static void uart_rx (int32 arg);
 static void uart_intr (int32 arg);
 static void uart_irq_start (void);
@@ -355,10 +355,8 @@ mecparerror ()
 /* IU error mode manager */
 
 static void
-error_mode (pc)
-     uint32 pc;
+error_mode (uint32 pc)
 {
-
   mec_ersr |= 0x1;
   decode_ersr ();
 }
@@ -505,8 +503,7 @@ mec_reset ()
 
 
 static void
-mec_intack (level)
-     int32 level;
+mec_intack (int level, int cpu)
 {
   int irq_test;
 
@@ -550,19 +547,14 @@ chk_irq ()
 }
 
 static void
-mec_irq (level)
-     int32 level;
+mec_irq (int32 level)
 {
   mec_ipr |= (1 << level);
   chk_irq ();
 }
 
 static void
-set_sfsr (fault, addr, asi, read)
-     uint32 fault;
-     uint32 addr;
-     uint32 asi;
-     uint32 read;
+set_sfsr (uint32 fault, uint32 addr, uint32 asi, uint32 read)
 {
   if ((asi == 0xa) || (asi == 0xb))
     {
@@ -582,10 +574,7 @@ set_sfsr (fault, addr, asi, read)
 }
 
 static int32
-mec_read (addr, asi, data)
-     uint32 addr;
-     uint32 asi;
-     uint32 *data;
+mec_read ( uint32 addr, uint32 asi, uint32 *data)
 {
 
   switch (addr & 0x0ff)
@@ -694,9 +683,7 @@ mec_read (addr, asi, data)
 }
 
 static int
-mec_write (addr, data)
-     uint32 addr;
-     uint32 data;
+mec_write ( uint32 addr, uint32 data)
 {
   if (sis_verbose > 1)
     printf ("MEC write a: %08x, d: %08x\n", addr, data);
@@ -1039,8 +1026,7 @@ port_init ()
 }
 
 static uint32
-read_uart (addr)
-     uint32 addr;
+read_uart (uint32 addr)
 {
 
   unsigned tmp;
@@ -1186,9 +1172,7 @@ read_uart (addr)
 }
 
 static void
-write_uart (addr, data)
-     uint32 addr;
-     uint32 data;
+write_uart ( uint32 addr, uint32 data)
 {
   unsigned char c;
 
@@ -1294,7 +1278,7 @@ flush_uart ()
 
 
 static void
-uarta_tx ()
+uarta_tx (int32 arg)
 {
   while (f1open)
     {
@@ -1315,7 +1299,7 @@ uarta_tx ()
 }
 
 static void
-uartb_tx ()
+uartb_tx (int32 arg)
 {
   while (f2open)
     {
@@ -1336,8 +1320,7 @@ uartb_tx ()
 }
 
 static void
-uart_rx (arg)
-     int32 arg;
+uart_rx (int32 arg)
 {
   int32 rsize;
   char rxd;
@@ -1387,8 +1370,7 @@ uart_rx (arg)
 }
 
 static void
-uart_intr (arg)
-     int32 arg;
+uart_intr ( int32 arg)
 {
   read_uart (0xE8);		/* Check for UART interrupts every 1000 clk */
   flush_uart ();		/* Flush UART ports      */
@@ -1411,8 +1393,7 @@ uart_irq_start ()
 /* Watch-dog */
 
 static void
-wdog_intr (arg)
-     int32 arg;
+wdog_intr (int32 arg)
 {
   if (wdog_status == disabled)
     {
@@ -1457,8 +1438,7 @@ wdog_start ()
 /* MEC timers */
 
 static void
-rtc_intr (arg)
-     int32 arg;
+rtc_intr (int32 arg)
 {
   if (rtc_counter == 0)
     {
@@ -1502,22 +1482,19 @@ rtc_counter_read ()
 }
 
 static void
-rtc_scaler_set (val)
-     uint32 val;
+rtc_scaler_set (uint32 val)
 {
   rtc_scaler = val & 0x0ff;	/* eight-bit scaler only */
 }
 
 static void
-rtc_reload_set (val)
-     uint32 val;
+rtc_reload_set (uint32 val)
 {
   rtc_reload = val;
 }
 
 static void
-gpt_intr (arg)
-     int32 arg;
+gpt_intr (int32 arg)
 {
   if (gpt_counter == 0)
     {
@@ -1560,22 +1537,19 @@ gpt_counter_read ()
 }
 
 static void
-gpt_scaler_set (val)
-     uint32 val;
+gpt_scaler_set (uint32 val)
 {
   gpt_scaler = val & 0x0ffff;	/* 16-bit scaler */
 }
 
 static void
-gpt_reload_set (val)
-     uint32 val;
+gpt_reload_set (uint32 val)
 {
   gpt_reload = val;
 }
 
 static void
-timer_ctrl (val)
-     uint32 val;
+timer_ctrl (uint32 val)
 {
 
   rtc_cr = ((val & TCR_TCRCR) != 0);
@@ -1792,9 +1766,7 @@ memory_write (uint32 addr, uint32 * data, int32 sz, int32 * ws)
 }
 
 static char *
-get_mem_ptr (addr, size)
-     uint32 addr;
-     uint32 size;
+get_mem_ptr ( uint32 addr, uint32 size)
 {
   if ((addr + size) < ROM_SIZE)
     {
@@ -1809,10 +1781,7 @@ get_mem_ptr (addr, size)
 }
 
 static int
-sis_memory_write (addr, data, length)
-     uint32 addr;
-     const unsigned char *data;
-     uint32 length;
+sis_memory_write (uint32 addr, const char *data, uint32 length)
 {
   char *mem;
 
@@ -1824,10 +1793,7 @@ sis_memory_write (addr, data, length)
 }
 
 static int
-sis_memory_read (addr, data, length)
-     uint32 addr;
-     char *data;
-     uint32 length;
+sis_memory_read (uint32 addr, char *data, uint32 length)
 {
   char *mem;
   int ws;
@@ -1874,5 +1840,7 @@ const struct memsys erc32sys = {
   memory_write,
   sis_memory_write,
   sis_memory_read,
-  boot_init
+  boot_init,
+  get_mem_ptr,
+  mec_irq
 };

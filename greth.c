@@ -113,7 +113,7 @@ mdio_write (uint32 address, uint32 data)
 }
 
 static void
-greth_tx (void)
+greth_tx (int32 arg)
 {
   int32 ws;
   uint32 tmpdesc;

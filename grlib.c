@@ -294,7 +294,8 @@ const struct grlib_ipcore l2c = {
 /* ------------------- LEON3 -----------------------*/
 
 static void
-leon3_add ()
+leon3_add (int irq, uint32 addr, uint32 mask)
+
 {
   grlib_ahbmpp_add (GRLIB_PP_ID (VENDOR_GAISLER, GAISLER_LEON3, 0, 0));
   if (sis_verbose)
@@ -1246,7 +1247,7 @@ apbuart_flush (void)
 }
 
 static void
-uarta_tx (void)
+uarta_tx (int32 arg)
 {
   while (f1open)
     {

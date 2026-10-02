@@ -122,7 +122,7 @@ create_socket (int port)
 
 /* poll socket periodically to detect gdb break */
 void
-socket_poll ()
+socket_poll (int32 arg)
 {
   WSAPOLLFD fdarray = { 0 };
   int ret;
@@ -341,18 +341,18 @@ gdb_remote_exec (char *buf)
       break;
     case 'k':			/* kill */
     case 'R':			/* restart */
-      sim_create_inferior (0, 0, 0, 0);
+      sim_create_inferior ();
       strcpy (txbuf, "OK");
       break;
     case 'v':
       if (strncmp (&buf[1], "Kill", 4) == 0)
 	{			/* restart */
-	  sim_create_inferior (0, 0, 0, 0);
+	  sim_create_inferior ();
 	  strcpy (txbuf, "OK");
 	}
       else if (strncmp (&buf[1], "Run;", 4) == 0)
 	{			/* Restart */
-	  sim_create_inferior (0, 0, 0, 0);
+	  sim_create_inferior ();
 	  strcpy (txbuf, "S00");
 	}
       else if (strncmp (&buf[1], "Cont", 4) == 0)

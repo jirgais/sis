@@ -134,7 +134,7 @@ static uint32 uarta_data;
 static void mem_init (void);
 static void close_port (void);
 static void leon2_reset (void);
-static void irqctrl_intack (int32 level);
+static void irqctrl_intack (int32 level, int32 cpu);
 static void chk_irq (void);
 static void set_irq (int32 level);
 static int32 apb_read (uint32 addr, uint32 * data);
@@ -143,7 +143,7 @@ static void port_init (void);
 static uint32 grlib_read_uart (uint32 addr);
 static void grlib_write_uart (uint32 addr, uint32 data);
 static void flush_uart (void);
-static void uarta_tx (void);
+static void uarta_tx (int32 arg);
 static void uart_rx (int32 arg);
 static void uart_intr (int32 arg);
 static void uart_irq_start (void);
@@ -244,7 +244,7 @@ leon2_reset (void)
 }
 
 static void
-irqctrl_intack (int32 level)
+irqctrl_intack (int32 level, int32 cpu)
 {
   int irq_test;
 
@@ -659,7 +659,7 @@ flush_uart (void)
 }
 
 static void
-uarta_tx (void)
+uarta_tx (int32 arg)
 {
   while (f1open)
     {
