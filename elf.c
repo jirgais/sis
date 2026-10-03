@@ -240,6 +240,16 @@ elf_load (char *fname, int load)
 {
   FILE *fp;
   int res;
+  char fn[256], *home;
+
+  /* resolve ~ if present */
+  if (fname && (fname[0] == '~'))
+    {
+      char *home = getenv ("HOME");
+      strncpy (fn, home, 255);
+      strncat(fn, &fname[1], 255-strlen(home));
+      fname = fn;
+    }
 
   if ((fp = fopen (fname, "rb")) == NULL)
     {
